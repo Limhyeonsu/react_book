@@ -46,11 +46,7 @@ class MyComponent extends Component {
         name: PropTypes.string,
         favoriteNumber: PropTypes.number.isRequired
     };
-    render() {
-        ...
-    }
 
-    /*
         render() {
             const { name, favoriteNumber, children } = this.props; //비구조화 할당
             return (
@@ -71,8 +67,5 @@ class MyComponent extends Component {
         name : PropTypes.string,
         favoriteNumber: PropTypes.number.isRequired
     };
-    */
-}
 
-class
 export default MyComponent;
