@@ -1,7 +1,8 @@
-import {Route, Routes, Link, MultiRoute} from 'react-router-dom';
+import {Route, Link, Switch} from 'react-router-dom';
 import About from './About';
 import Home from './Home';
-import Profile from './Profile';
+import Profiles from './Profiles';
+import HistorySample from './HistorySample';
 
 const App = () => {
   return (
@@ -14,19 +15,29 @@ const App = () => {
           <Link to="/about">소개</Link>
         </li>
         <li>
-          <Link to="/profile/velopert">velopert 프로필</Link>
+          <Link to="/profiles">프로필</Link>
         </li>
         <li>
-          <Link to="/profile/gildong">gildong 프로필</Link>
+          <Link to="/history">History 예제</Link>
         </li>
       </ul>
       <hr />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/info" element={<About />} />
-        <Route path="/profile/:username" element={<Profile />} />
-      </Routes>
+      {/*<Routes>*/}
+      <Switch>
+        <Route path="/" component={Home} exact={true} />
+        <Route path={['/about', 'info']} component={About} />
+        <Route path="/profiles" component={Profiles} />
+        <Route path="/history" component={HistorySample} />
+        <Route
+          render={({location}) => (
+            <div>
+              <h2>이 페이지는 존재하지 않습니다.</h2>
+              <p>{location.pathname}</p>
+            </div>
+          )}
+        />
+      </Switch>
+      {/*</Routes>*/}
     </div>
   );
 };
