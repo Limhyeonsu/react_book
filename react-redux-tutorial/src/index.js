@@ -7,6 +7,7 @@ import { Provider } from 'react-redux';
 import { composeWithDevTools } from 'redux-devtools-extension';
 
 //1. 스토어 생성
+// composeWithDevTools : 리덕스 개발자 도구 패키지
 const store = createStore(rootReducer, composeWithDevTools());
 
 ReactDOM.render(
