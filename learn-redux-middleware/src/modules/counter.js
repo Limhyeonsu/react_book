@@ -1,23 +1,38 @@
-import {createAction, handleActions, hanldleActions} from 'redux-actions';
+import {createAction, handleActions} from 'redux-actions';
+import {delay, put, takeEvery, takeLatest, select, throttle} from 'redux-saga/effects';
 
 const INCREASE = 'counter/INCREASE';
 const DECREASE = 'counter/DECREASE';
+const INCREASE_ASYNC = 'counter/INCREASE_ASYNC';
+const DECREASE_ASYNC = 'counter/DECREASE_ASYNC';
 
 export const increase = createAction(INCREASE);
 export const decrease = createAction(DECREASE);
 
-export const increaseAsync = () => (dispatch) => {
-  setTimeout(() => {
-    dispatch(increase());
-  }, 1000);
-};
+//마우스 클릭 이벤트가 payload 안에 들어가지 않도록 한다.
+export const increaseAsync = createAction(INCREASE_ASYNC, () => undefined);
+export const decreaseAsync = createAction(DECREASE_ASYNC, () => undefined);
 
-export const decreaseAsync = () => (dispatch) => {
-  setTimeout(() => {
-    dispatch(decrease());
-  }, 1000);
-};
+function* increaseSage() {
+  yield delay(1000); //1초를 기다린다.
+  yield put(increase()); //특정 액션을 디스패치한다.
+  const number = yield select((state) => state.counter);
+  console.log(`현재 값은 ${number}입니다.`);
+}
 
+function* decreaseSage() {
+  yield delay(1000);
+  yield put(decrease());
+}
+
+export function* counterSaga() {
+  //takeEvery는 들어오는 모든 액션에 대해 특정 작업을 처리해 준다.
+  yield throttle(3000, INCREASE_ASYNC, increaseSage);
+  yield takeEvery(INCREASE_ASYNC, increaseSage);
+  //takeLatest는 기존에 진행중이던 작업이 있다면 취소 처리
+  //가장 마지막으로 실행된 작업만 수행한다.
+  yield takeLatest(DECREASE_ASYNC, decreaseSage);
+}
 const initialState = 0;
 
 const counter = handleActions(
