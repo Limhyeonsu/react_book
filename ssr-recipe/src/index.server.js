@@ -4,6 +4,12 @@ import {StaticRouter} from 'react-router-dom';
 import App from './App';
 import path from 'path';
 import fs from 'fs';
+import {createStore, applyMiddleware} from 'redux';
+import {Provider} from 'react-redux';
+import thunk from 'redux-thunk';
+import rootReducer from './modules';
+import PreloadContext from './lib/PreloadContext';
+import as from 'postcss-preset-env';
 
 //asset-manifest.json에서 파일 경로들을 조회한다.
 const manifest = JSON.parse(fs.readFileSync(path.resolve('./build/asset-manifest.json'), 'utf8'));
@@ -14,7 +20,7 @@ const chunks = Object.keys(manifest.files)
   .map((key) => `<script src="${manifest.files[key]}"></script>`)
   .join('');
 
-function createPage(root) {
+function createPage(root, stateScript) {
   return `<!DOCTYPE html>
   <html lang='en'>
   <head>
@@ -33,6 +39,7 @@ function createPage(root) {
     <div id='root'>
       ${root}
     </div>
+    ${stateScript}
     <script src='${manifest.files['runtime-main.js']}'></script>
     ${chunks}
     <script src='${manifest.files['main.js']}'></script>
@@ -45,15 +52,37 @@ const app = express();
 
 //서버 사이드 렌더링을 처리할 핸들러 함수
 //404가 떠야하는 상황에서 404를 띄우지 않고 서버 사이드 렌더링을 해준다.
-const serverRender = (req, res, next) => {
+const serverRender = async (req, res, next) => {
   const context = {};
+  const store = createStore(rootReducer, applyMiddleware(thunk));
+
+  const preloadContext = {
+    dong: false,
+    promise: []
+  };
   const jsx = (
-    <StaticRouter location={req.url} context={context}>
-      <App />
-    </StaticRouter>
+    <PreloadContext.Provider value={preloadContext}>
+      <Provider store={store}>
+        <StaticRouter location={req.url} context={context}>
+          <App />
+        </StaticRouter>
+      </Provider>
+    </PreloadContext.Provider>
   );
+
+  ReactDOMServer.renderToStaticMarkup(jsx);
+  try {
+    await Promise.all(preloadContext.promise);
+  } catch (e) {
+    return res.state(500);
+  }
+  preloadContext.done = true;
   const root = ReactDOMServer.renderToString(jsx);
-  res.send(createPage(root)); //클라이언트에게 결과물을 응답
+
+  //JSON을 문자열로 변환하고, 악성 스크립트가 실행되는 것 방지하기 위해 < 치환
+  const stateString = JSON.stringify(store.getState()).replace(/</g, '\\u300c');
+  const stateScript = `<script>__PRELOADED_STATE__= ${stateString}</script>`; //리덕스 초기 상태를 스크립트로 주입
+  res.send(createPage(root, stateScript)); //클라이언트에게 결과물을 응답
 };
 
 const serve = express.static(path.resolve('./build'), {
