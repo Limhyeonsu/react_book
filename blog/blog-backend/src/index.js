@@ -1,21 +1,3 @@
-const Koa = require('koa');
-const Router = require('koa-router');
-const bodyParser = require('koa-bodyparser');
-const api = require('./api');
-
-const app = new Koa();
-const router = new Router();
-
-//라우터 설정
-router.use('/api', api.routes());
-
-//라우터 적용 전에 bodyParser 적용
-app.use(bodyParser());
-
-//app 인스턴스에 라우터 적용
-app.use(router.routes()).use(router.allowedMethods());
-
-//실행
-app.listen(4000, () => {
-  console.log('Listening to port 4000');
-});
+//이 파일에서만 no-global-assign ESLint 옵션을 비활성화 한다.
+require = require('esm')(module);
+module.exports = require('./main.js');
