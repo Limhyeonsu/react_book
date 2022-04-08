@@ -4,7 +4,6 @@ import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
 import mongoose from 'mongoose';
 import api from './api';
-
 //비구조화 할당을 통해 process.env 내부 값에 대한 레퍼런스 만들기
 //Node.js에서 환경변수는 process.env 값을 통해 조회할 수 있다.
 const { PORT, MONGO_URL } = process.env;
