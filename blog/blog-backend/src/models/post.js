@@ -10,6 +10,11 @@ const PostSchema = new Schema({
     type: Date,
     default: Date.now,
   },
+  //포스트 작성시 로그인을 해야만 작성할 수 있음.
+  user: {
+    _id: mongoose.Types.ObjectId,
+    username: String,
+  },
 });
 
 //모델 생성

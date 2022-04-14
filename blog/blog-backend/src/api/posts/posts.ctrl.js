@@ -4,13 +4,23 @@ import Joi from 'joi';
 
 const { ObjectId } = mongoose.Types;
 
-export const checkObjectId = (ctx, next) => {
+export const getPostById = async (ctx, next) => {
   const { id } = ctx.params;
   if (!ObjectId.isValid(id)) {
     ctx.status = 400;
     return;
   }
-  return next();
+  try {
+    const post = await Post.findById(id);
+    if(!post) {
+      ctx.status = 404;
+      return;
+    }
+    ctx.state.post = post;
+    return next();
+  } catch (e) {
+    ctx.throw(500, e);
+  }
 };
 
 /*
@@ -26,6 +36,7 @@ export const write = async (ctx) => {
     title: Joi.string().required(),
     body: Joi.string().required(),
     tags: Joi.array().items(Joi.string()).required(), //문자열로 이루어진 배열
+
   });
 
   //검증 실패인 경우 에러 처리
@@ -41,6 +52,7 @@ export const write = async (ctx) => {
     title,
     body,
     tags,
+    user: ctx.state.user,
   });
   try {
     await post.save();
@@ -51,7 +63,7 @@ export const write = async (ctx) => {
 };
 
 /*
-  GET /api/posts
+  GET /api/posts?username=&tags=&page=
  */
 export const list = async (ctx) => {
   const page = parseInt(ctx.query.page || '1', 10);
@@ -59,13 +71,20 @@ export const list = async (ctx) => {
     ctx.status = 400;
     return;
   }
+
+  const {tag, username} = ctx.query;
+  const query = {
+    ...(username ? {'user.username' : username} : {}),
+    ...(tag ? {tags: tag} : {}),
+  };
+
   try {
-    const posts = await Post.find()
+    const posts = await Post.find(query)
       .sort({ _id: -1 }) //내림차순 정렬
       .limit(10) //한 페이지에 10개만 보이게 제한
       .skip((page - 1) * 10)
       .exec();
-    const postCount = await Post.countDocuments().exec();
+    const postCount = await Post.countDocuments(query).exec();
     ctx.set('Last-Page', Math.ceil(postCount / 10)); //마지막 페이지 번호
     ctx.body = posts
       .map((post) => post.toJSON())
@@ -83,17 +102,7 @@ export const list = async (ctx) => {
   GET /api/posts/:id
  */
 export const read = async (ctx) => {
-  const { id } = ctx.params;
-  try {
-    const post = await Post.findById(id).exec();
-    if (!post) {
-      ctx.status = 404;
-      return;
-    }
-    ctx.body = post;
-  } catch (e) {
-    ctx.throw(500, e);
-  }
+  ctx.body = ctx.state.post;
 };
 
 /*
@@ -146,3 +155,14 @@ export const update = async (ctx) => {
     ctx.throw(500, e);
   }
 };
+
+//로그인한 사용자가 작성한 포스트인지 확인
+export const checkOwnPost = (ctx, next) => {
+  const {user, post} = ctx.state;
+  //MongoDB에서 조회한 데이터의 id 값을 문자열과 비교할 때는 반드시 .toString()을 해주어야 한다.
+  if(post.user._id.toString() !== user._id) {
+    ctx.status = 403;
+    return;
+  }
+  return next();
+}
